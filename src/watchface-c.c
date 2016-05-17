@@ -102,7 +102,7 @@ static void build_temp_layer(GRect bounds){
   // Improve the layout to be more like a watchface
   text_layer_set_background_color(s_temp_layer, GColorRoseVale);
   text_layer_set_text_color(s_temp_layer, GColorBlack);
-  text_layer_set_text(s_temp_layer, "temp");
+  text_layer_set_text(s_temp_layer, "temp C");
   text_layer_set_font(s_temp_layer, fonts_get_system_font(FONT_KEY_GOTHIC_28));
   text_layer_set_text_alignment(s_temp_layer, GTextAlignmentCenter);
 }
