@@ -1,12 +1,15 @@
 #include <pebble.h>
 
+#define KEY_TEMPERATURE 0
+#define KEY_CONDITIONS 1
+
 static Window *s_main_window;
 static TextLayer *s_time_layer;
 static TextLayer *s_date_layer;
 static TextLayer *s_temp_layer;
 
 
-static void update_time() {
+static void update_time(TextLayer *s_time_layer) {
   // Get a tm structure
   time_t temp = time(NULL);
   struct tm *tick_time = localtime(&temp);
@@ -53,7 +56,7 @@ static void update_time() {
   }
 }
 
-static void update_date(){
+static void update_date(TextLayer *s_date_layer){
   time_t temp = time(NULL);
   struct tm *tick_time = localtime(&temp);
   // Copy date into buffer from tm structure
@@ -63,22 +66,53 @@ static void update_date(){
   text_layer_set_text(s_date_layer, date_buffer);
 }
 
+static void update_temp(TextLayer *s_temp_layer){
+  time_t temp = time(NULL);
+  struct tm *tick_time = localtime(&temp);
+  // Get weather update every 30 minutes
+  if(tick_time->tm_min % 30 == 0) {
+    // Begin dictionary
+    DictionaryIterator *iter;
+    app_message_outbox_begin(&iter);
+
+    // Add a key-value pair
+    dict_write_uint8(iter, 0, 0);
+
+    // Send the message!
+    app_message_outbox_send();
+  }
+}
+
 static void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
-  update_time();
-  update_date();
+  update_time(s_time_layer);
+  update_date(s_date_layer);
+  update_temp(s_temp_layer);
+}
+
+static void draw_time_later(TextLayer *layer){
+  // Improve the layout to be more like a watchface
+  text_layer_set_background_color(layer, GColorBlue);
+  text_layer_set_text_color(layer, GColorBlack);
+  text_layer_set_text(layer, "00:00");
+  text_layer_set_font(layer, fonts_get_system_font(FONT_KEY_BITHAM_42_BOLD));
+  text_layer_set_text_alignment(layer, GTextAlignmentCenter);
 }
 
 static void build_text_layer(GRect bounds){
   // Create the TextLayer with specific bounds
   s_time_layer = text_layer_create(
       GRect(0, PBL_IF_ROUND_ELSE(58, 52), bounds.size.w, 50));
+  draw_time_later(s_time_layer);
+  
+}
 
+static void draw_date_later(TextLayer *layer){
   // Improve the layout to be more like a watchface
-  text_layer_set_background_color(s_time_layer, GColorBlue);
-  text_layer_set_text_color(s_time_layer, GColorBlack);
-  text_layer_set_text(s_time_layer, "00:00");
-  text_layer_set_font(s_time_layer, fonts_get_system_font(FONT_KEY_BITHAM_42_BOLD));
-  text_layer_set_text_alignment(s_time_layer, GTextAlignmentCenter);
+  text_layer_set_background_color(layer, GColorLiberty);
+  text_layer_set_text_color(layer, GColorBlack);
+  text_layer_set_text(layer, "date");
+  text_layer_set_font(layer, fonts_get_system_font(FONT_KEY_GOTHIC_28));
+  text_layer_set_text_alignment(layer, GTextAlignmentCenter);
 }
 
 static void build_date_layer(GRect bounds){
@@ -86,27 +120,60 @@ static void build_date_layer(GRect bounds){
   s_date_layer = text_layer_create(
       GRect(0, PBL_IF_ROUND_ELSE(108, 102), bounds.size.w, 50));
 
+  draw_date_later(s_date_layer);
+}
+
+static void draw_temp_later(TextLayer *layer){
   // Improve the layout to be more like a watchface
-  text_layer_set_background_color(s_date_layer, GColorLiberty);
-  text_layer_set_text_color(s_date_layer, GColorBlack);
-  text_layer_set_text(s_date_layer, "date");
-  text_layer_set_font(s_date_layer, fonts_get_system_font(FONT_KEY_GOTHIC_28));
-  text_layer_set_text_alignment(s_date_layer, GTextAlignmentCenter);
+  text_layer_set_background_color(layer, GColorRoseVale);
+  text_layer_set_text_color(layer, GColorBlack);
+  text_layer_set_text(layer, "...");
+  text_layer_set_font(layer, fonts_get_system_font(FONT_KEY_GOTHIC_28));
+  text_layer_set_text_alignment(layer, GTextAlignmentCenter);
 }
 
 static void build_temp_layer(GRect bounds){
   // Create the TextLayer with specific bounds
   s_temp_layer = text_layer_create(
       GRect(0, 0, bounds.size.w, PBL_IF_ROUND_ELSE(58,52)));
+  draw_temp_later(s_temp_layer);
+};
+  
 
-  // Improve the layout to be more like a watchface
-  text_layer_set_background_color(s_temp_layer, GColorRoseVale);
-  text_layer_set_text_color(s_temp_layer, GColorBlack);
-  text_layer_set_text(s_temp_layer, "temp C");
-  text_layer_set_font(s_temp_layer, fonts_get_system_font(FONT_KEY_GOTHIC_28));
-  text_layer_set_text_alignment(s_temp_layer, GTextAlignmentCenter);
+//temp stuff
+static void inbox_received_callback(DictionaryIterator *iterator, void *context) {
+  // Store incoming information
+  static char temperature_buffer[8];
+  static char conditions_buffer[32];
+  static char weather_layer_buffer[32];
+  // Read tuples for data
+  Tuple *temp_tuple = dict_find(iterator, KEY_TEMPERATURE);
+  Tuple *conditions_tuple = dict_find(iterator, KEY_CONDITIONS);
+
+  // If all data is available, use it
+  if(temp_tuple && conditions_tuple) {
+    snprintf(temperature_buffer, sizeof(temperature_buffer), "%dC", (int)temp_tuple->value->int32);
+    snprintf(conditions_buffer, sizeof(conditions_buffer), "%s", conditions_tuple->value->cstring);
+  }
+
+  // Assemble full string and display
+  snprintf(weather_layer_buffer, sizeof(weather_layer_buffer), "%s, %s", temperature_buffer, conditions_buffer);
+  text_layer_set_text(s_temp_layer, weather_layer_buffer);
+
+}
+static void inbox_dropped_callback(AppMessageResult reason, void *context) {
+  APP_LOG(APP_LOG_LEVEL_ERROR, "Message dropped!");
 }
 
+static void outbox_failed_callback(DictionaryIterator *iterator, AppMessageResult reason, void *context) {
+  APP_LOG(APP_LOG_LEVEL_ERROR, "Outbox send failed!");
+}
+
+static void outbox_sent_callback(DictionaryIterator *iterator, void *context) {
+  APP_LOG(APP_LOG_LEVEL_INFO, "Outbox send success!");
+}
+
+//-----------
 static void main_window_load(Window *window) {
   // Get information about the Window
   Layer *window_layer = window_get_root_layer(window);
@@ -145,6 +212,15 @@ static void init() {
   // Register with TickTimerService
   tick_timer_service_subscribe(MINUTE_UNIT, tick_handler);
 
+  // Register callbacks
+  app_message_register_inbox_received(inbox_received_callback);
+  app_message_register_inbox_dropped(inbox_dropped_callback);
+  app_message_register_outbox_failed(outbox_failed_callback);
+  app_message_register_outbox_sent(outbox_sent_callback);
+  // Open AppMessage
+  const int inbox_size = 128;
+  const int outbox_size = 128;
+  app_message_open(inbox_size, outbox_size);
 }
 
 static void deinit() {
