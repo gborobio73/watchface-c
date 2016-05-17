@@ -1,0 +1,19 @@
+{
+  "uuid": "73a2520f-8ad4-46bd-882c-4c126eca90a4",
+  "shortName": "watchface-c",
+  "longName": "watchface-c",
+  "companyName": "Leeeloo Inc.",
+  "versionLabel": "1.0",
+  "sdkVersion": "3",
+  "targetPlatforms": ["aplite", "basalt", "chalk"],
+  "enableMultiJS": true,
+  "watchapp": {
+    "watchface": true
+  },
+  "appKeys": {
+    "dummy": 0
+  },
+  "resources": {
+    "media": []
+  }
+}
