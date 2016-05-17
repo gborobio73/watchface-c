@@ -97,7 +97,7 @@ static void build_date_layer(GRect bounds){
 static void build_temp_layer(GRect bounds){
   // Create the TextLayer with specific bounds
   s_temp_layer = text_layer_create(
-      GRect(0, PBL_IF_ROUND_ELSE(0,0), bounds.size.w, 50));
+      GRect(0, 0, bounds.size.w, PBL_IF_ROUND_ELSE(58,52)));
 
   // Improve the layout to be more like a watchface
   text_layer_set_background_color(s_temp_layer, GColorRoseVale);
