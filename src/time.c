@@ -1,5 +1,8 @@
 #include <pebble.h>
 
+static TextLayer *s_time_layer;
+
+
 static void draw_time_later(TextLayer *layer){
   // Improve the layout to be more like a watchface
   text_layer_set_background_color(layer, GColorBlue);
@@ -9,7 +12,7 @@ static void draw_time_later(TextLayer *layer){
   text_layer_set_text_alignment(layer, GTextAlignmentCenter);
 }
 
-static void update_time(TextLayer *s_time_layer) {
+static void update_time() {
   // Get a tm structure
   time_t temp = time(NULL);
   struct tm *tick_time = localtime(&temp);
@@ -56,11 +59,13 @@ static void update_time(TextLayer *s_time_layer) {
   }
 }
 
-static TextLayer* build_text_layer(GRect bounds){
-  TextLayer *layer = text_layer_create(
+static void build_text_layer(GRect bounds){
+  s_time_layer = text_layer_create(
       GRect(0, PBL_IF_ROUND_ELSE(58, 52), bounds.size.w, 50));
-  draw_time_later(layer);
-  return layer;
+  draw_time_later(s_time_layer);
 }
 
+static TextLayer* get_time_layer(){
+	return s_time_layer;
+}
 

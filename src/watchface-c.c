@@ -4,19 +4,15 @@
 #include <temp.c>
 
 static Window *s_main_window;
-static TextLayer *s_time_layer;
-static TextLayer *s_date_layer;
-static TextLayer *s_temp_layer;
-
 
 static void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
-  update_time(s_time_layer);
-  update_date(s_date_layer);
+  update_time();
+  update_date();
   send_message_to_get_temp();
 }
 
 static void inbox_received_callback(DictionaryIterator *iterator, void *context) {
-  update_temp(iterator, context, s_temp_layer);
+  update_temp(iterator, context);
 
 }
 static void inbox_dropped_callback(AppMessageResult reason, void *context) {
@@ -36,21 +32,24 @@ static void main_window_load(Window *window) {
   Layer *window_layer = window_get_root_layer(window);
   GRect bounds = layer_get_bounds(window_layer);
 
-  s_time_layer = build_text_layer(bounds);
-  s_date_layer = build_date_layer(bounds);
-  s_temp_layer = build_temp_layer(bounds);
+  build_text_layer(bounds);
+  build_date_layer(bounds);
+  build_temp_layer(bounds);
 
   // Add it as a child layer to the Window's root layer
-  layer_add_child(window_layer, text_layer_get_layer(s_time_layer));
-  layer_add_child(window_layer, text_layer_get_layer(s_date_layer));
-  layer_add_child(window_layer, text_layer_get_layer(s_temp_layer));
+  layer_add_child(window_layer, text_layer_get_layer(get_time_layer()));
+  layer_add_child(window_layer, text_layer_get_layer(get_date_layer()));
+  layer_add_child(window_layer, text_layer_get_layer(get_temp_layer()));
 }
 
 static void main_window_unload(Window *window) {
   // Destroy TextLayer
-  text_layer_destroy(s_time_layer);
-  text_layer_destroy(s_date_layer);
-  text_layer_destroy(s_temp_layer);
+  text_layer_destroy(get_time_layer());
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "time layer destroyed!");
+  text_layer_destroy(get_date_layer());
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "date layer destroyed!");
+  text_layer_destroy(get_temp_layer());
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "temp layer destroyed!");
 }
 
 static void init() {
